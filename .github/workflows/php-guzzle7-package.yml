@@ -7,6 +7,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest # 运行环境，告诉它运行在什么环境
+    container:
+      image: php:7.3
     steps: # 步骤
 
     # 第一步：下载源码（CI/CD拉取代码到自己的本地）
@@ -15,10 +17,15 @@ jobs:
 
     # 第二步：打包构建
     - name: Build
-      uses: actions/setup-node@master
-    - run: npm install # 安装第三方包
-    - run: npm run build # 打包
-    - run: tar -zcvf release.tgz .nuxt static nuxt.config.js package.json package-lock.json pm2.config.json
+      run: |
+        apt update
+          apt install -y libzip-dev unzip
+          docker-php-ext-install zip
+          pecl install xdebug
+          docker-php-ext-enable xdebug
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+          composer install
+          tar -zcvf release.tgz ./
       # 把.nuxt、nuxt.config.js等文件，打包压缩为release.tgz
 
     # 第三步：发布 Release
