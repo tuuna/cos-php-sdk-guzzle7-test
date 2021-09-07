@@ -25,7 +25,7 @@ jobs:
           docker-php-ext-enable xdebug
           curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
           composer install
-          tar -zcvf release.tgz ./
+          tar -zcvf release.tgz *
       # 把.nuxt、nuxt.config.js等文件，打包压缩为release.tgz
 
     # 第三步：发布 Release
