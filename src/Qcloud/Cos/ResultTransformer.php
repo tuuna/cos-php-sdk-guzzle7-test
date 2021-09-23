@@ -2,22 +2,10 @@
 
 namespace Qcloud\Cos;
 
-use Guzzle\Service\Description\Parameter;
-use Guzzle\Service\Description\ServiceDescription;
-use GuzzleHttp\HandlerStack;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use Qcloud\Cos\Signature;
-use GuzzleHttp\Command\Guzzle\Description;
-use GuzzleHttp\Command\Guzzle\GuzzleClient;
 use GuzzleHttp\Command\CommandInterface;
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Middleware;
-use GuzzleHttp\Psr7;
-use GuzzleHttp\Psr7\Uri;
 use GuzzleHttp\Command\Result;
-use InvalidArgumentException;
-
 
 class ResultTransformer {
     private $config;
@@ -30,7 +18,7 @@ class ResultTransformer {
 
     public function writeDataToLocal(CommandInterface $command, RequestInterface $request, ResponseInterface $response) {
         $action = $command->getName();
-        if ($action == "GetObject") {
+        if ($action == "GetObject" || $action == "GetSnapshot") {
             if (isset($command['SaveAs'])) {
                 $fp = fopen($command['SaveAs'], "wb");
                 $stream = $response->getBody();
@@ -80,6 +68,76 @@ class ResultTransformer {
         return $result;
     }
 
+    public function ciContentInfoTransformer(CommandInterface $command, Result $result) {
+        $action = $command->getName();
+        if ($action == "ImageInfo" || $action == "ImageExif" || $action == "ImageAve") {
+            $length = intval($result['ContentLength']);
+            if($length > 0){
+                $result['Data'] = $this->geCiContentInfo($result, $length);
+            }
+        }
+
+        if ($action == "PutObject" && isset($command["PicOperations"]) &&  $command["PicOperations"]) {
+            $picOperations = json_decode($command["PicOperations"], true);
+            $picRuleSize = isset($picOperations['rules']) && is_array($picOperations['rules']) ? sizeof($picOperations['rules']) : 0;
+            $length = intval($result['ContentLength']);
+            if($length > 0){
+                $content = $this->geCiContentInfo($result, $length);
+                $obj = simplexml_load_string($content, "SimpleXMLElement", LIBXML_NOCDATA);
+                $xmlData = json_decode(json_encode($obj),true);
+                if ($picRuleSize == 1 && isset($xmlData['ProcessResults']['Object'])){
+                    $tmp = $xmlData['ProcessResults']['Object'];
+                    unset($xmlData['ProcessResults']['Object']);
+                    $xmlData['ProcessResults']['Object'][] = $tmp;
+                }
+                $result['Data'] = $xmlData;
+            }
+        }
+
+        if ($action == "GetBucketGuetzli" ) {
+            $length = intval($result['ContentLength']);
+            if($length > 0){
+                $content = $this->geCiContentInfo($result, $length);
+                $obj = simplexml_load_string($content, "SimpleXMLElement", LIBXML_NOCDATA);
+                $arr = json_decode(json_encode($obj),true);
+                $result['GuetzliStatus'] = isset($arr[0]) ? $arr[0] : '';
+            }
+        }
+
+        $xml2JsonActions = array(
+            'CreateMediaTranscodeJobs' => 1,
+            'CreateMediaSnapshotJobs' => 1,
+            'CreateMediaConcatJobs' => 1,
+            'GetDetectAudioResult' => 1,
+            'GetDetectVideoResult' => 1,
+            'GetDetectDocumentResult' => 1,
+        );
+        if (key_exists($action, $xml2JsonActions)) {
+            $length = intval($result['ContentLength']);
+            if($length > 0){
+                $content = $this->geCiContentInfo($result, $length);
+                $obj = simplexml_load_string($content, "SimpleXMLElement", LIBXML_NOCDATA);
+                $xmlData = json_decode(json_encode($obj),true);
+                $result['Response'] = $xmlData;
+            }
+        }
+
+        return $result;
+    }
+
+    public function geCiContentInfo($result, $length) {
+        $f = $result['Body'];
+        $data = "";
+        while (!$f->eof()) {
+            $tmp = $f->read($length);
+            if (empty($tmp)) {
+                break;
+            }
+            $data .= $tmp;
+        }
+        return $data;
+    }
+
     public function getSelectContents($result) {
         $f = $result['RawData'];
         while (!$f->eof()) {
@@ -88,9 +146,9 @@ class ResultTransformer {
             if (empty($tmp)) {
                 break;
             }
-            $totol_length = (int)(unpack("N", $tmp)[1]);
+            $total_length = (int)(unpack("N", $tmp)[1]);
             $headers_length = (int)(unpack("N", $f->read(4))[1]);
-            $body_length = $totol_length - $headers_length - 16;
+            $body_length = $total_length - $headers_length - 16;
             $predule_crc = (int)(unpack("N", $f->read(4))[1]);
             $headers = array();
             for ($offset = 0; $offset < $headers_length;) {

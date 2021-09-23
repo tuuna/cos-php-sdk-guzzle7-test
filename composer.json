@@ -1,5 +1,5 @@
 {
-    "name": "tuunalai/cos-sdk-v5",
+    "name": "qcloud/cos-sdk-v5",
     "description": "PHP SDK for QCloud COS",
     "keywords": [
         "qcloud", "cos", "php"
@@ -13,16 +13,25 @@
         {
             "name": "lewzylu",
             "email": "327874225@qq.com"
+        },
+        {
+            "name": "tuunalai",
+            "email": "550566181@qq.com"
         }
     ],
     "autoload": {
-      "psr-0": {
-        "Qcloud\\Cos\\": "src/"
-     }
+        "psr-4": {
+            "Qcloud\\Cos\\": "src/Qcloud/Cos/"
+        },
+        "files": ["src/Qcloud/Cos/Common.php"]
     },
     "require": {
-        "php": ">=7.3",
-        "guzzlehttp/guzzle": "^7.0.1",
-        "guzzlehttp/guzzle-services": "~1.2"
+        "php": ">=5.6",
+        "guzzlehttp/guzzle": ">=6.2.1",
+        "guzzlehttp/guzzle-services": ">=1.1",
+        "guzzlehttp/psr7": "<=2.0"
+    },
+    "config": {
+        "platform-check": false
     }
 }

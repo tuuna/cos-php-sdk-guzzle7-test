@@ -15,7 +15,7 @@ function region_map( $region ) {
     'gz'=>'ap-guangzhou',
     'cd'=>'ap-chengdu',
     'sgp'=>'ap-singapore' );
-    if ( array_key_exists( $region, $regionmap ) ) {
+    if ( isset($regionmap[ $region]) ) {
         return $regionmap[$region];
     }
     return $region;
@@ -38,7 +38,7 @@ function startWith( $haystack, $needle ) {
     if ( $length == 0 ) {
         return true;
     }
-    return ( substr( $haystack, $length ) === $needle );
+    return ( substr( $haystack, 0, $length ) === $needle );
 }
 
 function headersMap( $command, $request ) {

@@ -46,7 +46,7 @@ class Signature {
     }
 
     public function createAuthorization( RequestInterface $request, $expires = '+30 minutes' ) {
-        if ( is_null( $expires ) ) {
+        if ( is_null( $expires ) || !strtotime( $expires )) {
             $expires = '+30 minutes';
         }
         $signTime = ( string )( time() - 60 ) . ';' . ( string )( strtotime( $expires ) );
@@ -70,7 +70,7 @@ class Signature {
         $headerListArray = [];
         foreach ( $request->getHeaders() as $key => $value ) {
             $key = strtolower( urlencode( $key ) );
-            $value = urlencode( $value[0] );
+            $value = rawurlencode( $value[0] );
             if ( $this->needCheckHeader( $key ) ) {
                 $headerListArray[$key] = $key. '='. $value;
             }
